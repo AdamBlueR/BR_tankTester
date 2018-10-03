@@ -29,6 +29,13 @@ ser2 = serial.Serial(#Arduino used as ADC
 	    stopbits=serial.STOPBITS_ONE,\
 	    bytesize=serial.EIGHTBITS,\
 	    timeout=3)
+ser3 = serial.Serial(#Arduino used as RPM Sensor
+	    port='/dev/ttyACM1',\
+	    baudrate=19200,\
+	    parity=serial.PARITY_NONE,\
+	    stopbits=serial.STOPBITS_ONE,\
+	    bytesize=serial.EIGHTBITS,\
+	    timeout=3)
 print "Welcome to Tankinator test platform!! Automated in 4/2018 by TonyW"
 print "This script automates tank testing by running the thruster for a set durationm while recording data, with a long duration pause between each throttle level for tank to settle"
 print "Push ctrl+c to exit at any time. Launch script with /tankinator/./tanktester.py"
@@ -49,7 +56,7 @@ print (calc_duration)
 print 'seconds. %s measurements will be logged. Go make something.'%((float(d_steps)*float(num_steps)) * (1/loop_period))
 time.sleep(1)
 f=open("/home/pi/tankinator/BR_tankTester/%s"%fname, "a+") # write header for CSV once
-f.write("Time, Force, Power, Voltage, Current, PWM")
+f.write("Time, Force, Power, Voltage, Current, RPM, PWM")
 f.write('\n')
 f.close()
 LOCALFILE = '%s'%fname #file to backup
@@ -90,9 +97,16 @@ while (throttle <=MAX_THROTTLE) and (prevthrottle != MAX_THROTTLE): # exit when 
 		input = float(ser2.readline()) # Arduino configured to output at 10hz of this script
 		ser2.flushInput()# clear input before taking reading for rough sync to seperate Arduino :(
 		FORCE = input #add scaling here to include lever arm input, remove from Arduino output
-		print {"PWM":throttle,"CURRENT":CURRENT,"VOLTAGE":VOLTAGE,"POWER":POWER,"FORCE":FORCE,"TIME":datetime.datetime.now().strftime("%H:%M:%S.%f")} #attempt at json readable format
+		print {"PWM":throttle,"RPM":RPM,"CURRENT":CURRENT,"VOLTAGE":VOLTAGE,"POWER":POWER,"FORCE":FORCE,"TIME":datetime.datetime.now().strftime("%H:%M:%S.%f")} #attempt at json readable format
 	except:
 			print "sorry man, force sensor comm error"
+	try: #to read the external RPM sensor. 
+		input = float(ser3.readline()) # Arduino configured to output at 10hz of this script
+		ser3.flushInput()# clear input before taking reading for rough sync to seperate Arduino :(
+		RPM = input 
+		print {"PWM":throttle,"RPM":RPM,"CURRENT"CURRENT":CURRENT,"VOLTAGE":VOLTAGE,"POWER":POWER,"FORCE":FORCE,"TIME":datetime.datetime.now().strftime("%H:%M:%S.%f")} #attempt at json readable format
+	except:
+			print "sorry man, RPM sensor comm error
 	try: #to log data
 		f=open("/home/pi/tankinator/BR_tankTester/%s"%fname, "a+") #open new file in append mode
 		f.write(datetime.datetime.now().strftime("%H:%M:%S.%f")) # write data in csv format
@@ -105,6 +119,8 @@ while (throttle <=MAX_THROTTLE) and (prevthrottle != MAX_THROTTLE): # exit when 
 		f.write(',')
 		f.write("%s"%CURRENT)
 		f.write(',')
+		f.write("%s"%RPM)
+		f.write(',')       
 		f.write("%s"%throttle)
 		f.write('\n')
 		f.close()
